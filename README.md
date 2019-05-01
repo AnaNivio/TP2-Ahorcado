@@ -2,7 +2,7 @@ ACLARACION: En el tp, las variables intentos y vidasJugador estan inicializadas 
 ha sido cargado a la misma. Sin embargo, (como dice en el compilado) originalmente se le da cinco oportunidades a 
 ambos jugadores para adivinar la palabra.
 
-2da Aclaracion: Fuera de la fecha de entrega. En la Version 1, habia un error: los Threads no trataban de ingresar a la zona critica y solo una terminaba jugando. En la Version 2, se soluciona este problema y otros que se fueron presentando a medida que modificaba el codigo.
+2da Aclaracion: Fuera de la fecha de entrega, subo la Version 2 del TP. En la Version 1, habia un error: los Threads no trataban de ingresar a la zona critica y solo una terminaba jugando. En la Version 2, se soluciona este problema y otros que se fueron presentando a medida que modificaba el codigo.
 
 CUESTIONARIO
 1.	Diferencia entre Runnable y Thread
