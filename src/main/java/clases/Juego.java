@@ -14,22 +14,23 @@ import java.util.Date;
 
 public class Juego {
     private boolean jugando= Boolean.FALSE;
-    private static final int intentos=50;
-    private int vidasJugador=50;
-    private String palabraElegida=elegirPalabra();
+    boolean gano=Boolean.FALSE;
+    private String palabraElegida;
     private Set<Character> letrasErroneas=new HashSet<>();
     private Set<Character> letrasCorrectas=new HashSet<>();
+    private String nombreGanador=" ";
+
+    public Juego(String elegirPalabra) {
+
+        this.palabraElegida=elegirPalabra;
+    }
 
 
-
-    public synchronized void jugar() {
-
-        boolean gano=Boolean.FALSE;
-
-
-        while(vidasJugador != 0 && gano == Boolean.FALSE && !palabraElegida.equals(" ")){
+    public synchronized boolean jugar() {
 
             //aca debo considerar que entran todos los hilos. Hay uno que va a lograr pasar la condicion mientras que el resto se quedara en el wait
+        if(!gano){
+
             while (jugando) {
                 try {
                     wait();
@@ -38,7 +39,9 @@ public class Juego {
                 }
             }
 
+
             jugando = Boolean.TRUE;
+
 
             String nombreJugador = Thread.currentThread().getName();
 
@@ -48,43 +51,56 @@ public class Juego {
             int random = (int) Math.floor(Math.random() * (97 - 122) + 122);
             char letraRandom = (char) random;
 
+            /*Analizando una vez mas este fragmento de codigo (y leyendo mi antigua explicacion) decidi modificar algunas cosas.
+            * El funcionamiento sigue siendo igual: por medio de la funcion IndexOf se indicara a que lista pertenecera la
+            * letra no sin antes comprobar que la misma pueda agregarse a la lista y, en caso de no poder hcerlo por la repeticion
+            * de alguna letra, se elige otra al azar siempre y cuando esta no pertenezca a la palabra.
+            * Ahora lo que modifique: en mi version anterior, habia considerado que la letra random no perteneciese a los erroneos
+            * una vez elegida. Por eso, a la hora de mostrar mensajes que se volvia a hacer la comprobacion, agregaba en la lista
+             * donde correspondia. Esto generaba un problema.
+             * Supongamos que tenemos la palabra "red". H es una letra erronea que ya se encuentra cargada en el set de letras
+             * erroneas. Cuando intente agregarse a la lista, no podra hacerlo. Asi que, cambia su valor a e.
+             * Al final, a la hora de mostrar el mensaje de que se adivino una palabra, se agregaria al set de correctas.
+             * El problema es el siguiente: Y si e ya se hallaba en la lista de correctas? Entonces uno o mas jugadores
+             * presentarian la misma respuesta.
+             *
+             * Es por esta razon que cambie la logica en los while: dentro de la condicion de si es erronea/correcta
+              * y si se puede agregar a su set especifico, tambien se comprueba si letra random
+             * pertenece al otro set y, en caso de no poder agregarse, que cambie su valor una vez mas. De esa forma, me
+             * aseguro que la letra siempre sera cargada en cada lista y no se repetira el valor.*/
+
             //Función indexOf:
             // Devuelve palabraElegida -1 si lo que busca no se encuentra, y devuelve un entero positivo si la encuentra
             if (palabraElegida.indexOf(letraRandom) < 0) {
                 while (palabraElegida.indexOf(letraRandom) < 0 && !letrasErroneas.add(letraRandom)) {
                     random = (int) Math.floor(Math.random() * (97 - 122) + 122);
                     letraRandom = (char) random;
+
+                    while(palabraElegida.indexOf(letraRandom) >= 0 && !letrasCorrectas.add(letraRandom)) {
+                        random = (int) Math.floor(Math.random() * (97 - 122) + 122);
+                        letraRandom = (char) random;
+                    }
                 }
+
+                System.out.print("(" + nombreJugador + " pregunta si la letra " + letraRandom + " se encuentra en la palabra...)\n");
+                System.out.print("Ups! Que maaal! La letra " + letraRandom + " no esta en la palabra...pierdes una vida. MUAJAJAJA!\n");
+
 
             } else if (palabraElegida.indexOf(letraRandom) >= 0) {
 
                 while (palabraElegida.indexOf(letraRandom) >= 0 && !letrasCorrectas.add(letraRandom)) {
                     random = (int) Math.floor(Math.random() * (97 - 122) + 122);
                     letraRandom = (char) random;
+
+                    while(palabraElegida.indexOf(letraRandom) < 0 && !letrasErroneas.add(letraRandom)) {
+                        random = (int) Math.floor(Math.random() * (97 - 122) + 122);
+                        letraRandom = (char) random;
+                    }
+
                 }
-
-            }
-
-
-            /*La comprobacion de los caracteres repetidos fue lo mas dificil. Funciona asi:
-             * En el caso que alguna de las letras (ya sea correcta o no) ya se encuentre en su respectiva lista
-             * se eligira otro numero caracter para reemplazarla. El problema es que si hablamos en los erroneos, este
-             * caracter puede pertenecer a los correctos y lo mismo sucede en el caso opuesto.
-             * Por eso, junto a la condicion de si se puede o no agregar a la lista, se pregunta si este nuevo caracter
-             * sigue siendo erroneo/correcto.
-             * Lo que definira si pertenece a un grupo u otro es la siguiente condicion :
-             * Se pregunta una vez mas si la letra pertenece o no a la palabra y, en cada respectivo caso, se lanza el mensaje
-             * correspondiente y se agrega la letra a la lista*/
-            System.out.print("(" + nombreJugador + " pregunta si la letra " + letraRandom + " se encuentra en la palabra...)\n");
-
-            if (palabraElegida.indexOf(letraRandom) < 0) {
-                letrasErroneas.add(letraRandom);
-                System.out.print("Ups! Que maaal! La letra " + letraRandom + " no esta en la palabra...pierdes una vida. MUAJAJAJA!\n");
-                vidasJugador = vidasJugador - 1;
-
-            } else {
-                letrasCorrectas.add(letraRandom);
+                System.out.print("(" + nombreJugador + " pregunta si la letra " + letraRandom + " se encuentra en la palabra...)\n");
                 System.out.println("(" + nombreJugador + " ha adivinado una letra :" + letraRandom + ". Muy Bien!)");
+
             }
 
 
@@ -93,85 +109,29 @@ public class Juego {
             System.out.println("Letras erroneas: " + letrasErroneas.toString());
             System.out.println("Palabra a adivinar: " + codificacionPalabraElegida(palabraElegida));
 
+            System.out.println("---------------------------------------------------------");
 
             gano=ganoOperdio(palabraElegida,letrasCorrectas);
 
-            if(gano == Boolean.FALSE) {
+            if(gano) {
 
-                if ((palabraElegida.length() - letrasCorrectas.size() > 1)) {
-                    System.out.println("JAJAJA! Jamas adivinaran la palabra!!!");
-                } else {
-                    System.out.println("E-EM... Puede ser que esten cerca...PERO NO LOGRARAN VENCERME, YA VERAN!!");
-                }
-
-                System.out.println("---------------------------------------------------------");
-
-            } else {
-
+                System.out.println("(BIEN! "+nombreJugador+" ha adivinado la palabra!! Ha salvado el dia!!)");
                 System.out.println("Me han logrado vencer...pero perder una batalla no significa que he perdido la guerra. ME VENGARE!!");
-                grabarGanador(Thread.currentThread().getName(),palabraElegida);
-                palabraElegida=" ";
+                //grabarGanador(Thread.currentThread().getName(),palabraElegida);//antes la funcion estaba aca
+                nombreGanador=nombreJugador;
 
             }
 
-            if(vidasJugador == 0) {
-            System.out.println("MUAJAJAJA! HAN PERDIDO. SON TAAAN PATETICOS...VEAMOS QUIEN LOS SALVARA AHORA MUAJAJAJAJA");
-
-            } else if (vidasJugador < intentos && !palabraElegida.equals(" ")) {
-                System.out.println("(Tu compañero te da animos; aun sigues teniendo vidas, no te des por vencido!)");
                 jugando = Boolean.FALSE;
                 notifyAll();
 
-            }
+
 
         }
 
-
+        return gano;
     }
 
-    /**
-    *Metodo que elige desde la base de datos una palabra que los jugadores deberan adivinar
-    */
-
-    private String elegirPalabra()
-    {
-        String palabra= "";
-
-        try {
-            Class.forName("com.mysql.jdbc.Driver");
-
-        }catch (ClassNotFoundException e)
-        {
-            System.out.println("Falta la libreria de mysql!!");
-        }
-
-
-        try {
-            Connection connection= DriverManager.getConnection("jdbc:mysql://localhost/tp2ahorcado", "root", "");
-
-            Statement st= connection.createStatement();
-            ResultSet rs=st.executeQuery("SELECT PALABRA_RANDOM FROM PALABRAS");
-            ArrayList<String> palabrasDAO=new ArrayList<>();
-
-            while(rs.next())
-            {
-                palabrasDAO.add(rs.getString("palabra_random"));
-            }
-
-            palabra=palabrasDAO.get((int)Math.floor(Math.random()*(palabrasDAO.size())));
-
-
-        }catch (SQLException e){
-
-            System.out.println("No se pudo conectar a la base de datos");
-        }
-        catch (Exception e){
-            System.out.println("es otra cosa");
-        }
-
-
-        return palabra;
-    }
 
     /**
      * Esconde las letras que no se han averiguado aun para que el jugador sepa que palabras ha adivinado
@@ -245,48 +205,12 @@ public class Juego {
         return gano;
     }
 
-    /**
-     * Graba en la BD el ganador de la ronda
-     * @param nombreGanador
-     * @param palabraGanadora
-     */
-    public void grabarGanador(String nombreGanador,String palabraGanadora){
+    public String getNombreGanador() {
+        return nombreGanador;
+    }
 
-        try {
-            Class.forName("com.mysql.jdbc.Driver");
-
-        }catch (ClassNotFoundException e)
-        {
-            System.out.println("Falta la libreria de mysql!!");
-        }
-
-
-        try {
-            Connection connection= DriverManager.getConnection("jdbc:mysql://localhost/tp2ahorcado", "root", "");
-
-            PreparedStatement ps= connection.prepareStatement("INSERT INTO ganadores(nombre_ganador,fecha_victoria,palabra_ganadora)"
-                    + "VALUES (?,?,?);");
-
-            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-            Date date = new Date();
-
-            ps.setString(1,nombreGanador);
-            ps.setString(2,dateFormat.format(date));
-            ps.setString(3,palabraGanadora);
-
-            ps.execute();
-
-
-        }catch (SQLException e){
-
-            System.out.println("No se pudo conectar a la base de datos");
-        }
-        catch (Exception e){
-            System.out.println("es otra cosa");
-        }
-
-        System.out.println("\n\n----------------------------------------------------------------");
-
+    public String getPalabraElegida() {
+        return palabraElegida;
     }
 
 }
